@@ -5,16 +5,15 @@ Created on Wed Oct 27 19:25:12 2021
 
 @author: Neil
 """
-from keras.layers import Input
-from keras.layers import Conv2D, MaxPool2D, Dense, BatchNormalization, Activation, add, GlobalAvgPool2D
+import keras
+import math
+from keras.layers import Input, Conv2D, MaxPool2D, GlobalAvgPool2D, Dense, BatchNormalization, Activation, add
 from keras.models import Model
 from keras.utils import plot_model
 from keras.callbacks import LearningRateScheduler, TensorBoard
 from keras import backend as K
 from keras.datasets import cifar10
 from keras.preprocessing.image import ImageDataGenerator
-import keras
-import math
 
 def conv_block(x, filter_num, kernel_size, strides=(1, 1), padding='same'):
     x = Conv2D(filter_num, kernel_size = kernel_size, strides = strides,
