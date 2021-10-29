@@ -7,19 +7,20 @@ Created on Wed Oct 27 19:25:12 2021
 """
 import keras
 import math
+from keras import backend as K
 from keras.layers import Input, Conv2D, MaxPool2D, GlobalAvgPool2D, Dense, BatchNormalization, Activation, add
 from keras.models import Model
-from keras.utils import plot_model
+#from keras.utils import plot_model
 from keras.callbacks import LearningRateScheduler, TensorBoard
-from keras import backend as K
 from keras.datasets import cifar10
 from keras.preprocessing.image import ImageDataGenerator
 
-def conv_block(x, filter_num, kernel_size, strides=(1, 1), padding='same'):
+def conv_block(x, filter_num, kernel_size, strides=(1, 1), padding='same', active=True):
     x = Conv2D(filter_num, kernel_size = kernel_size, strides = strides,
                           padding = padding)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    if(active):
+        x = Activation('relu')(x)
     return x
 
 def shortcut_connection(x, block):
@@ -43,10 +44,12 @@ def shortcut_connection(x, block):
     return add([x, block])
  
 def basic_block(x, filter_num, strides=(1, 1)):
-    conv1 = conv_block(x, filter_num, kernel_size=(3, 3), strides = strides)
-    residual = conv_block(conv1, filter_num, kernel_size=(3, 3), strides = strides)
+    conv1 = conv_block(x, filter_num, kernel_size=(3, 3), strides = strides, active=True)
+    residual = conv_block(conv1, filter_num, kernel_size=(3, 3), strides = strides, active=False)
+    merge = shortcut_connection(x, residual)
+    x = Activation('relu')(merge)
     
-    return shortcut_connection(x, residual)
+    return x
 
 def residual_block(x, filter_num, repetitions):
     for i in range(repetitions):
@@ -56,8 +59,9 @@ def residual_block(x, filter_num, repetitions):
  
 def build_resnet_18(input_shape=(32, 32, 3), classes = 10):
     x = Input(shape = input_shape)
-    conv1 = conv_block(x, 64, kernel_size=(7, 7), strides=(2, 2))
+    conv1 = conv_block(x, 64, kernel_size=(7, 7), strides=(2, 2), active=True)
     pool1 = MaxPool2D(pool_size=(3, 3), strides=(2, 2), padding='same')(conv1)
+    
     conv2 = residual_block(pool1, 64, 2)
     conv3 = residual_block(conv2, 128, 2)
     conv4 = residual_block(conv3, 256, 2)
@@ -91,7 +95,9 @@ if __name__ == '__main__':
 
     # 创建模型
     model = build_resnet_18(input_shape=(img_rows, img_cols, img_channels), classes = num_classes)
-    plot_model(model, 'resnet_18-18.png')
+    #plot_model(model, 'resnet_18.png')
+    #import sys
+    #sys.exit()
     
     model.compile(loss='categorical_crossentropy', optimizer = 'Adam', metrics=['accuracy'])
 
@@ -104,12 +110,13 @@ if __name__ == '__main__':
 
     # 设置回调
     layers = 8 * 2 + 2
-    cbks = [TensorBoard(log_dir='./resnet_{:d}/'.format(layers), histogram_freq=0), LearningRateScheduler(step_decay)]
+    cbks = [TensorBoard(log_dir='./resnet_{:d}/'.format(layers), histogram_freq=0),
+            LearningRateScheduler(step_decay)]
     
     # 开始训练
     batch_size = 128
-    epochs = 30
-    iterations = 30000
+    epochs = 10
+    iterations = 50000
 
     model.fit_generator(img_gen.flow(x_train, y_train, batch_size=batch_size),
                          steps_per_epoch=iterations,
