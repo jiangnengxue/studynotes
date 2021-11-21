@@ -50,6 +50,7 @@ def data_process():
     
     return train_x, train_y, test_x, test_y, feature_info
 
+# 按域建Embedding表的方式
 def build_embedding_layer(feature_info):
     emb_list = []
     for i, f in enumerate(feature_info):
